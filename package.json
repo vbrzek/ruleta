@@ -1,0 +1,13 @@
+{
+  "name": "ruleta",
+  "private": true,
+  "workspaces": ["shared", "server", "client"],
+  "scripts": {
+    "dev": "concurrently -n server,client -c cyan,green \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm -w server run dev",
+    "dev:client": "npm -w client run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

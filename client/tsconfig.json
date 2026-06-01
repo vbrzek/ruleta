@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "jsx": "preserve",
+    "lib": ["ESNext", "DOM"],
+    "skipLibCheck": true,
+    "paths": {
+      "@ruleta/shared": ["../shared/types.ts"]
+    }
+  },
+  "include": ["src/**/*", "../shared/types.ts"]
+}
