@@ -6,11 +6,16 @@ export function useGame() {
   const socketStore = useSocketStore()
   const gameStore = useGameStore()
 
+  function clearReconnectData() {
+    sessionStorage.removeItem('ruleta_room_code')
+    sessionStorage.removeItem('ruleta_old_socket_id')
+  }
+
   function createRoom(nickname: string, isSingleplayer = false) {
+    clearReconnectData()  // prevent stale rejoin from firing during new game
     socketStore.connect()
     gameStore.setupListeners()
     socketStore.emit('room:create', { nickname, isSingleplayer })
-    // Save room code once we know it (listen for room:joined)
     socketStore.getSocket().once('room:joined', (data: unknown) => {
       const d = data as { code: string }
       sessionStorage.setItem('ruleta_room_code', d.code)
@@ -18,6 +23,7 @@ export function useGame() {
   }
 
   function joinRoom(code: string, nickname: string) {
+    clearReconnectData()  // prevent stale rejoin from firing during new game
     socketStore.connect()
     gameStore.setupListeners()
     socketStore.emit('room:join', { code, nickname })
