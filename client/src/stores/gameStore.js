@@ -13,6 +13,8 @@ export const useGameStore = defineStore('game', () => {
     const betConfirmed = ref(false);
     const isListening = ref(false);
     let bettingTimer = null;
+    // Registered handler references for teardown
+    const registeredHandlers = [];
     const myPlayer = computed(() => gameState.value?.players.find(p => p.id === myPlayerId.value) ?? null);
     function setupListeners() {
         if (isListening.value)
@@ -20,13 +22,19 @@ export const useGameStore = defineStore('game', () => {
         isListening.value = true;
         const s = socketStore.getSocket();
         myPlayerId.value = s.id ?? '';
+        function addListener(event, fn) {
+            socketStore.on(event, fn);
+            registeredHandlers.push({ event, fn });
+        }
         // Update myPlayerId once connected
-        s.on('connect', () => { myPlayerId.value = s.id ?? ''; });
-        socketStore.on('room:joined', (data) => {
+        const onConnect = () => { myPlayerId.value = s.id ?? ''; };
+        s.on('connect', onConnect);
+        registeredHandlers.push({ event: 'connect', fn: onConnect });
+        addListener('room:joined', (data) => {
             const d = data;
             roomCode.value = d.code;
         });
-        socketStore.on('room:playerJoined', (data) => {
+        addListener('room:playerJoined', (data) => {
             const d = data;
             if (gameState.value) {
                 if (!gameState.value.players.find(p => p.id === d.player.id)) {
@@ -34,12 +42,12 @@ export const useGameStore = defineStore('game', () => {
                 }
             }
         });
-        socketStore.on('room:playerLeft', (data) => {
+        addListener('room:playerLeft', (data) => {
             const d = data;
             if (gameState.value)
                 gameState.value.players = d.players;
         });
-        socketStore.on('room:newHost', (data) => {
+        addListener('room:newHost', (data) => {
             const d = data;
             if (gameState.value) {
                 gameState.value.players.forEach(p => {
@@ -47,12 +55,12 @@ export const useGameStore = defineStore('game', () => {
                 });
             }
         });
-        socketStore.on('game:started', (data) => {
+        addListener('game:started', (data) => {
             const d = data;
             gameState.value = d.gameState;
             gameOverData.value = null;
         });
-        socketStore.on('game:bettingOpen', (data) => {
+        addListener('game:bettingOpen', (data) => {
             const d = data;
             if (gameState.value)
                 gameState.value.phase = 'betting';
@@ -60,13 +68,13 @@ export const useGameStore = defineStore('game', () => {
             bettingTimeLeft.value = d.timeLimit;
             startBettingTimer();
         });
-        socketStore.on('game:playerBet', (data) => {
+        addListener('game:playerBet', (data) => {
             const d = data;
             if (gameState.value) {
                 gameState.value.currentBets[d.playerId] = { type: 'even', amount: 0 };
             }
         });
-        socketStore.on('game:spinResult', (data) => {
+        addListener('game:spinResult', (data) => {
             const d = data;
             if (gameState.value) {
                 gameState.value.phase = 'spinning';
@@ -81,22 +89,29 @@ export const useGameStore = defineStore('game', () => {
             lastBalances.value = d.newBalances;
             stopBettingTimer();
         });
-        socketStore.on('game:roundEnd', (data) => {
+        addListener('game:roundEnd', (data) => {
             const d = data;
             gameState.value = d.gameState;
         });
-        socketStore.on('game:playerBankrupt', (data) => {
+        addListener('game:playerBankrupt', (data) => {
             const d = data;
             const p = gameState.value?.players.find(pl => pl.id === d.playerId);
             if (p)
                 p.status = 'spectator';
         });
-        socketStore.on('game:over', (data) => {
+        addListener('game:over', (data) => {
             const d = data;
             gameOverData.value = d;
             if (gameState.value)
                 gameState.value.phase = 'lobby';
         });
+    }
+    function teardownListeners() {
+        for (const { event, fn } of registeredHandlers) {
+            socketStore.off(event, fn);
+        }
+        registeredHandlers.length = 0;
+        isListening.value = false;
     }
     function startBettingTimer() {
         stopBettingTimer();
@@ -117,12 +132,14 @@ export const useGameStore = defineStore('game', () => {
         roomCode.value = '';
         gameOverData.value = null;
         betConfirmed.value = false;
-        isListening.value = false;
         stopBettingTimer();
+        teardownListeners();
+        sessionStorage.removeItem('ruleta_room_code');
+        sessionStorage.removeItem('ruleta_old_socket_id');
     }
     return {
         gameState, myPlayerId, roomCode, bettingTimeLeft,
         lastWinners, lastBalances, gameOverData, betConfirmed,
-        myPlayer, setupListeners, reset,
+        myPlayer, setupListeners, teardownListeners, reset,
     };
 });

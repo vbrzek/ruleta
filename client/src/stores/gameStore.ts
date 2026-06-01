@@ -18,6 +18,9 @@ export const useGameStore = defineStore('game', () => {
 
   let bettingTimer: ReturnType<typeof setInterval> | null = null
 
+  // Registered handler references for teardown
+  const registeredHandlers: Array<{ event: string; fn: (...args: unknown[]) => void }> = []
+
   const myPlayer = computed(() =>
     gameState.value?.players.find(p => p.id === myPlayerId.value) ?? null,
   )
@@ -29,15 +32,22 @@ export const useGameStore = defineStore('game', () => {
     const s = socketStore.getSocket()
     myPlayerId.value = s.id ?? ''
 
-    // Update myPlayerId once connected
-    s.on('connect', () => { myPlayerId.value = s.id ?? '' })
+    function addListener(event: string, fn: (...args: unknown[]) => void) {
+      socketStore.on(event, fn)
+      registeredHandlers.push({ event, fn })
+    }
 
-    socketStore.on('room:joined', (data: unknown) => {
+    // Update myPlayerId once connected
+    const onConnect = () => { myPlayerId.value = s.id ?? '' }
+    s.on('connect', onConnect)
+    registeredHandlers.push({ event: 'connect', fn: onConnect })
+
+    addListener('room:joined', (data: unknown) => {
       const d = data as { code: string; players: Player[]; isSingleplayer: boolean }
       roomCode.value = d.code
     })
 
-    socketStore.on('room:playerJoined', (data: unknown) => {
+    addListener('room:playerJoined', (data: unknown) => {
       const d = data as { player: Player }
       if (gameState.value) {
         if (!gameState.value.players.find(p => p.id === d.player.id)) {
@@ -46,12 +56,12 @@ export const useGameStore = defineStore('game', () => {
       }
     })
 
-    socketStore.on('room:playerLeft', (data: unknown) => {
+    addListener('room:playerLeft', (data: unknown) => {
       const d = data as { playerId: string; players: Player[] }
       if (gameState.value) gameState.value.players = d.players
     })
 
-    socketStore.on('room:newHost', (data: unknown) => {
+    addListener('room:newHost', (data: unknown) => {
       const d = data as { playerId: string }
       if (gameState.value) {
         gameState.value.players.forEach(p => {
@@ -60,13 +70,13 @@ export const useGameStore = defineStore('game', () => {
       }
     })
 
-    socketStore.on('game:started', (data: unknown) => {
+    addListener('game:started', (data: unknown) => {
       const d = data as { gameState: GameState }
       gameState.value = d.gameState
       gameOverData.value = null
     })
 
-    socketStore.on('game:bettingOpen', (data: unknown) => {
+    addListener('game:bettingOpen', (data: unknown) => {
       const d = data as { timeLimit: number }
       if (gameState.value) gameState.value.phase = 'betting'
       betConfirmed.value = false
@@ -74,14 +84,14 @@ export const useGameStore = defineStore('game', () => {
       startBettingTimer()
     })
 
-    socketStore.on('game:playerBet', (data: unknown) => {
+    addListener('game:playerBet', (data: unknown) => {
       const d = data as { playerId: string }
       if (gameState.value) {
         gameState.value.currentBets[d.playerId] = { type: 'even', amount: 0 }
       }
     })
 
-    socketStore.on('game:spinResult', (data: unknown) => {
+    addListener('game:spinResult', (data: unknown) => {
       const d = data as { number: number; winners: Record<string, number>; newBalances: Record<string, number> }
       if (gameState.value) {
         gameState.value.phase = 'spinning'
@@ -96,22 +106,30 @@ export const useGameStore = defineStore('game', () => {
       stopBettingTimer()
     })
 
-    socketStore.on('game:roundEnd', (data: unknown) => {
+    addListener('game:roundEnd', (data: unknown) => {
       const d = data as { gameState: GameState }
       gameState.value = d.gameState
     })
 
-    socketStore.on('game:playerBankrupt', (data: unknown) => {
+    addListener('game:playerBankrupt', (data: unknown) => {
       const d = data as { playerId: string }
       const p = gameState.value?.players.find(pl => pl.id === d.playerId)
       if (p) p.status = 'spectator'
     })
 
-    socketStore.on('game:over', (data: unknown) => {
+    addListener('game:over', (data: unknown) => {
       const d = data as { winner: Player | null; leaderboard: Player[] }
       gameOverData.value = d
       if (gameState.value) gameState.value.phase = 'lobby'
     })
+  }
+
+  function teardownListeners() {
+    for (const { event, fn } of registeredHandlers) {
+      socketStore.off(event, fn)
+    }
+    registeredHandlers.length = 0
+    isListening.value = false
   }
 
   function startBettingTimer() {
@@ -131,13 +149,15 @@ export const useGameStore = defineStore('game', () => {
     roomCode.value = ''
     gameOverData.value = null
     betConfirmed.value = false
-    isListening.value = false
     stopBettingTimer()
+    teardownListeners()
+    sessionStorage.removeItem('ruleta_room_code')
+    sessionStorage.removeItem('ruleta_old_socket_id')
   }
 
   return {
     gameState, myPlayerId, roomCode, bettingTimeLeft,
     lastWinners, lastBalances, gameOverData, betConfirmed,
-    myPlayer, setupListeners, reset,
+    myPlayer, setupListeners, teardownListeners, reset,
   }
 })

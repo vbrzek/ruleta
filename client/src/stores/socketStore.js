@@ -8,8 +8,21 @@ export const useSocketStore = defineStore('socket', () => {
         if (socket?.connected)
             return socket;
         socket = io({ path: '/socket.io', transports: ['websocket'] });
-        socket.on('connect', () => { connected.value = true; });
-        socket.on('disconnect', () => { connected.value = false; });
+        socket.on('connect', () => {
+            connected.value = true;
+            // Try to reconnect to a previous session
+            const savedCode = sessionStorage.getItem('ruleta_room_code');
+            const savedOldId = sessionStorage.getItem('ruleta_old_socket_id');
+            if (savedCode && savedOldId && savedOldId !== socket.id) {
+                socket.emit('room:rejoin', { code: savedCode, oldId: savedOldId });
+            }
+        });
+        socket.on('disconnect', () => {
+            connected.value = false;
+            // Save current socket ID before it changes on reconnect
+            if (socket?.id)
+                sessionStorage.setItem('ruleta_old_socket_id', socket.id);
+        });
         return socket;
     }
     function getSocket() {

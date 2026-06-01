@@ -33,6 +33,14 @@ async function runGameLoop(code: string): Promise<void> {
   if (!room) return
 
   while (true) {
+    // Guard: if all players went bankrupt (e.g. singleplayer), end game immediately
+    const activePlayers = room.getPlayers().filter(p => p.status === 'active')
+    if (activePlayers.length === 0) {
+      io.to(code).emit('game:over', { winner: null, leaderboard: room.getLeaderboard() })
+      rooms.remove(code)
+      return
+    }
+
     room.setPhase('betting')
     room.clearBets()
     io.to(code).emit('game:bettingOpen', { timeLimit: 30 })
@@ -117,6 +125,7 @@ io.on('connection', socket => {
     if (!room) return
     const player = room.getPlayer(socket.id)
     if (!player?.isHost) return
+    if (room.phase !== 'lobby') return  // Already started
     room.setPhase('betting')
     io.to(code).emit('game:started', { gameState: room.getState() })
     runGameLoop(code)
@@ -127,6 +136,11 @@ io.on('connection', socket => {
     if (!code) return
     const room = rooms.get(code)
     if (!room) return
+    const VALID_TYPES = new Set(['red', 'black', 'even', 'odd', 'number'])
+    if (!VALID_TYPES.has(type)) {
+      socket.emit('room:error', { message: 'Neplatný typ sázky' })
+      return
+    }
     try {
       room.placeBet(socket.id, { type: type as any, amount, number })
       socket.to(code).emit('game:playerBet', { playerId: socket.id })
@@ -173,6 +187,7 @@ io.on('connection', socket => {
     socket.join(code.toUpperCase())
     const room = rooms.get(code)
     if (room) {
+      room.swapPlayerId(oldId, socket.id)
       socket.emit('room:joined', { code, players: room.getPlayers(), isSingleplayer: room.isSingleplayer })
       if (room.phase !== 'lobby') {
         socket.emit('game:started', { gameState: room.getState() })

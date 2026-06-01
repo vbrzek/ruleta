@@ -62,6 +62,20 @@ export class GameRoom {
     return { shouldClose: false }
   }
 
+  swapPlayerId(oldId: string, newId: string): void {
+    const player = this.players.get(oldId)
+    if (!player) return
+    player.id = newId
+    this.players.delete(oldId)
+    this.players.set(newId, player)
+    // Also swap bet if any
+    const bet = this.bets.get(oldId)
+    if (bet) {
+      this.bets.delete(oldId)
+      this.bets.set(newId, bet)
+    }
+  }
+
   clearBets(): void { this.bets.clear() }
 
   placeBet(playerId: string, bet: Bet): void {

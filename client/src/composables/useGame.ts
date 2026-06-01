@@ -10,12 +10,18 @@ export function useGame() {
     socketStore.connect()
     gameStore.setupListeners()
     socketStore.emit('room:create', { nickname, isSingleplayer })
+    // Save room code once we know it (listen for room:joined)
+    socketStore.getSocket().once('room:joined', (data: unknown) => {
+      const d = data as { code: string }
+      sessionStorage.setItem('ruleta_room_code', d.code)
+    })
   }
 
   function joinRoom(code: string, nickname: string) {
     socketStore.connect()
     gameStore.setupListeners()
     socketStore.emit('room:join', { code, nickname })
+    sessionStorage.setItem('ruleta_room_code', code.toUpperCase())
   }
 
   function startGame(code: string) {

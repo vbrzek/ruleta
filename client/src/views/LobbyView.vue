@@ -29,9 +29,10 @@
       <button
         v-if="isHost"
         class="btn-primary start-btn"
+        :disabled="started"
         @click="doStart"
       >
-        Spustit hru
+        {{ started ? 'Spouštím...' : 'Spustit hru' }}
       </button>
       <p v-else class="waiting-text">Čekáme až hostitel spustí hru...</p>
     </div>
@@ -56,6 +57,7 @@ const players = ref<Player[]>([])
 const qrUrl = ref('')
 const copied = ref(false)
 const myId = ref('')
+const started = ref(false)
 
 const isHost = computed(() => {
   const me = players.value.find(p => p.id === myId.value)
@@ -117,6 +119,7 @@ async function copyCode() {
 }
 
 function doStart() {
+  started.value = true
   startGame(code)
 }
 </script>

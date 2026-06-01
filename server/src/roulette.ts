@@ -31,5 +31,6 @@ export function resolveWin(
     case 'even':   return result !== 0 && result % 2 === 0 ? amount : 0
     case 'odd':    return result % 2 === 1 ? amount : 0
     case 'number': return result === betNumber ? amount * 35 : 0
+    default: return 0
   }
 }

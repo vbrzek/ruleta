@@ -144,3 +144,29 @@ describe('onlyOneActivePlayer', () => {
     expect(room.onlyOneActivePlayer()?.id).toBe('host1')
   })
 })
+
+describe('swapPlayerId', () => {
+  it('remaps a player from old ID to new ID', () => {
+    room.swapPlayerId('host1', 'newSocketId')
+    expect(room.getPlayer('host1')).toBeUndefined()
+    expect(room.getPlayer('newSocketId')).toBeDefined()
+    expect(room.getPlayer('newSocketId')?.id).toBe('newSocketId')
+  })
+  it('preserves player data after swap', () => {
+    room.getPlayer('host1')!.balance = 1500
+    room.swapPlayerId('host1', 'newSocketId')
+    expect(room.getPlayer('newSocketId')?.balance).toBe(1500)
+    expect(room.getPlayer('newSocketId')?.isHost).toBe(true)
+  })
+  it('swaps associated bet if present', () => {
+    room.setPhase('betting')
+    room.placeBet('host1', { type: 'even', amount: 100 })
+    room.swapPlayerId('host1', 'newSocketId')
+    expect(room.allActiveBetsPlaced()).toBe(true)
+  })
+  it('does nothing for unknown old ID', () => {
+    room.swapPlayerId('ghost', 'newSocketId')
+    expect(room.getPlayers()).toHaveLength(1)
+    expect(room.getPlayer('host1')).toBeDefined()
+  })
+})
