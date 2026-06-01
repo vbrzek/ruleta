@@ -21,6 +21,9 @@ const io = new Server(httpServer, {
 
 const rooms = new RoomManager()
 
+// Holds disconnected player state for reconnection window
+const disconnectedPlayers = new Map<string, { code: string; timeout: ReturnType<typeof setTimeout> }>()
+
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
@@ -137,21 +140,42 @@ io.on('connection', socket => {
       if (code === socket.id) continue
       const room = rooms.get(code)
       if (!room) continue
-      const { newHostId, shouldClose } = room.removePlayer(socket.id)
-      if (shouldClose) {
-        rooms.remove(code)
-      } else {
-        if (newHostId) {
-          io.to(code).emit('room:newHost', { playerId: newHostId })
+      const player = room.getPlayer(socket.id)
+      if (!player) continue
+
+      // Hold the player's state for 60 s to allow reconnection
+      const timeout = setTimeout(() => {
+        disconnectedPlayers.delete(socket.id)
+        const { newHostId, shouldClose } = room.removePlayer(socket.id)
+        if (shouldClose) {
+          rooms.remove(code)
+        } else {
+          if (newHostId) io.to(code).emit('room:newHost', { playerId: newHostId })
+          io.to(code).emit('room:playerLeft', { playerId: socket.id, players: room.getPlayers() })
+          if (room.phase === 'betting' && room.allActiveBetsPlaced()) {
+            room.onAllBetsPlaced?.()
+          }
         }
-        io.to(code).emit('room:playerLeft', {
-          playerId: socket.id,
-          players: room.getPlayers(),
-        })
-        // If all remaining players already bet, trigger resolution
-        if (room.phase === 'betting' && room.allActiveBetsPlaced()) {
-          room.onAllBetsPlaced?.()
-        }
+      }, 60_000)
+
+      disconnectedPlayers.set(socket.id, { code, timeout })
+    }
+  })
+
+  socket.on('room:rejoin', ({ code, oldId }: { code: string; oldId: string }) => {
+    const held = disconnectedPlayers.get(oldId)
+    if (!held || held.code !== code.toUpperCase()) {
+      socket.emit('room:error', { message: 'Relace vypršela, připojte se znovu' })
+      return
+    }
+    clearTimeout(held.timeout)
+    disconnectedPlayers.delete(oldId)
+    socket.join(code.toUpperCase())
+    const room = rooms.get(code)
+    if (room) {
+      socket.emit('room:joined', { code, players: room.getPlayers(), isSingleplayer: room.isSingleplayer })
+      if (room.phase !== 'lobby') {
+        socket.emit('game:started', { gameState: room.getState() })
       }
     }
   })
