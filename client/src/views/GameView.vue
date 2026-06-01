@@ -8,11 +8,6 @@
         @spin-complete="onSpinComplete"
       />
 
-      <div class="round-badge" v-if="gameState">
-        Kolo {{ gameState.round + 1 }}
-        <span v-if="gameState.phase === 'betting'" class="timer"> · {{ bettingTimeLeft }}s</span>
-      </div>
-
       <GameResult
         :visible="showResult"
         :result-number="gameState?.lastResult"
@@ -22,9 +17,20 @@
 
     <!-- Right: sidebar -->
     <div class="sidebar">
+      <!-- Always-visible home button -->
+      <div class="sidebar-header">
+        <button class="home-btn btn-secondary" @click="goHome">← Domů</button>
+        <span v-if="gameState" class="round-label">Kolo {{ gameState.round + 1 }}<span v-if="gameState.phase === 'betting'" class="timer"> · {{ bettingTimeLeft }}s</span></span>
+      </div>
+
       <div class="players-section">
+        <div v-if="!gameState" class="connecting-notice">
+          <div class="spinner">⟳</div>
+          <p>Připojování...</p>
+          <button class="btn-secondary" style="margin-top:12px" @click="goHome">Zpět domů</button>
+        </div>
         <PlayerList
-          v-if="gameState"
+          v-else
           :players="gameState.players"
           :my-id="myPlayerId"
           :bets="gameState.currentBets"
@@ -176,11 +182,48 @@ function goHome() {
   background: var(--bg2);
 }
 
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--rim);
+  flex-shrink: 0;
+}
+
+.home-btn {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+.round-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
 .players-section {
   flex: 1;
   overflow-y: auto;
   border-bottom: 1px solid var(--rim);
 }
+
+.connecting-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  gap: 8px;
+}
+
+.spinner {
+  font-size: 2rem;
+  animation: spin 1.5s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .betting-section {
   flex-shrink: 0;
