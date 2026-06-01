@@ -4,7 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": true,
-    "jsx": "preserve",
+    "isolatedModules": true,
     "lib": ["ESNext", "DOM"],
     "skipLibCheck": true,
     "paths": {

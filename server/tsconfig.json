@@ -1,14 +1,15 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "strict": true,
     "outDir": "dist",
+    "rootDir": "src",
     "skipLibCheck": true,
     "paths": {
       "@ruleta/shared": ["../shared/types.ts"]
     }
   },
-  "include": ["src/**/*", "tests/**/*", "../shared/types.ts"]
+  "include": ["src/**/*", "tests/**/*"]
 }

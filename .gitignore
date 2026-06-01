@@ -2,3 +2,9 @@ node_modules/
 dist/
 .superpowers/
 *.local
+.env
+.env.*
+*.log
+coverage/
+.DS_Store
+*.tsbuildinfo
