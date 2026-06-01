@@ -69,7 +69,6 @@ import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useGameStore } from '../stores/gameStore'
-import { useSocketStore } from '../stores/socketStore'
 import { useGame } from '../composables/useGame'
 import { useSound } from '../composables/useSound'
 import RouletteWheel from '../components/RouletteWheel.vue'
@@ -82,7 +81,6 @@ import type { BetType } from '@ruleta/shared'
 const route = useRoute()
 const router = useRouter()
 const gameStore = useGameStore()
-const socketStore = useSocketStore()
 const { placeBet, startGame } = useGame()
 const { startTicking, stopTicking, slowdownSound, playWin, playLoss } = useSound()
 
@@ -100,8 +98,8 @@ onMounted(() => {
   // If singleplayer: we arrived here from HomeView which created the room
   // game:started is handled by gameStore; if gameState is null, start the game
   if (!gameState.value) {
-    const s = socketStore.getSocket()
-    s.once('room:joined', () => startGame(code))
+    // Singleplayer: room was created in HomeView, we are the host — start immediately
+    startGame(code)
   }
 })
 
