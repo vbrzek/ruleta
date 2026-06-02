@@ -1,7 +1,7 @@
 // server/src/index.ts
 import { createGameServer } from './createGameServer.js'
 
-const PORT = 3001
+const PORT = Number(process.env.PORT) || 3001
 
 const { httpServer } = createGameServer()
 

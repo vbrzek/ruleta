@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@ruleta/shared": ["../shared/types.d.ts"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["tests/**/*"]
+}
