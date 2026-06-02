@@ -10,9 +10,9 @@ export function useInstallPrompt() {
   const canInstall = ref(false)
   const showIosHint = ref(false)
 
+  // Client-only SPA (see useSound.ts): window/navigator are always present.
   const isStandalone = ref(
-    (typeof window !== 'undefined' &&
-      window.matchMedia?.('(display-mode: standalone)').matches) ||
+    window.matchMedia('(display-mode: standalone)').matches ||
       (navigator as unknown as { standalone?: boolean }).standalone === true,
   )
 
