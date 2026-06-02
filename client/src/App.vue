@@ -49,7 +49,7 @@ onUnmounted(() => window.removeEventListener('resize', checkOrientation))
 .mute-btn {
   position: fixed;
   top: 12px;
-  right: 12px;
+  left: 12px;
   z-index: 50;
   background: rgba(20,10,50,0.8);
   border: 1px solid var(--rim);
