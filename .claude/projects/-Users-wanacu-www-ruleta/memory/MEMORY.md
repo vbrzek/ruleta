@@ -1,0 +1,1 @@
+- [Vite .js shadows .ts](vite-js-shadows-ts.md) — never commit compiled .js into client/src; Vite loads it over the .ts source
