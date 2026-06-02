@@ -79,4 +79,56 @@ describe('resolveWin', () => {
   it('number bet on 0 pays 35:1', () => {
     expect(resolveWin('number', 0, 0, 100)).toBe(3500)
   })
+
+  // Low (1-18) / High (19-36) — 1:1
+  it('low bet on 1-18 pays 1:1', () => {
+    expect(resolveWin('low', undefined, 1, 100)).toBe(100)
+    expect(resolveWin('low', undefined, 18, 100)).toBe(100)
+  })
+  it('low bet on 19-36 pays 0', () => {
+    expect(resolveWin('low', undefined, 19, 100)).toBe(0)
+  })
+  it('low bet on 0 pays 0', () => {
+    expect(resolveWin('low', undefined, 0, 100)).toBe(0)
+  })
+  it('high bet on 19-36 pays 1:1', () => {
+    expect(resolveWin('high', undefined, 19, 100)).toBe(100)
+    expect(resolveWin('high', undefined, 36, 100)).toBe(100)
+  })
+  it('high bet on 1-18 pays 0', () => {
+    expect(resolveWin('high', undefined, 18, 100)).toBe(0)
+  })
+  it('high bet on 0 pays 0', () => {
+    expect(resolveWin('high', undefined, 0, 100)).toBe(0)
+  })
+
+  // Dozen — 2:1. Selection 1 = 1-12, 2 = 13-24, 3 = 25-36
+  it('dozen bet on matching dozen pays 2:1', () => {
+    expect(resolveWin('dozen', 1, 5, 100)).toBe(200)
+    expect(resolveWin('dozen', 2, 13, 100)).toBe(200)
+    expect(resolveWin('dozen', 2, 24, 100)).toBe(200)
+    expect(resolveWin('dozen', 3, 36, 100)).toBe(200)
+  })
+  it('dozen bet on wrong dozen pays 0', () => {
+    expect(resolveWin('dozen', 1, 13, 100)).toBe(0)
+    expect(resolveWin('dozen', 3, 24, 100)).toBe(0)
+  })
+  it('dozen bet on 0 pays 0', () => {
+    expect(resolveWin('dozen', 1, 0, 100)).toBe(0)
+  })
+
+  // Column — 2:1. Selection 1 = {1,4,...,34}, 2 = {2,5,...,35}, 3 = {3,6,...,36}
+  it('column bet on matching column pays 2:1', () => {
+    expect(resolveWin('column', 1, 1, 100)).toBe(200)
+    expect(resolveWin('column', 1, 34, 100)).toBe(200)
+    expect(resolveWin('column', 2, 35, 100)).toBe(200)
+    expect(resolveWin('column', 3, 36, 100)).toBe(200)
+  })
+  it('column bet on wrong column pays 0', () => {
+    expect(resolveWin('column', 1, 2, 100)).toBe(0)
+    expect(resolveWin('column', 3, 35, 100)).toBe(0)
+  })
+  it('column bet on 0 pays 0', () => {
+    expect(resolveWin('column', 1, 0, 100)).toBe(0)
+  })
 })

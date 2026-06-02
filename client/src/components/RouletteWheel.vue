@@ -391,18 +391,22 @@ watch(() => props.spinning, (spinning) => {
   const targetCenter = (targetIdx + 0.5) * SEG_ANGLE
   // rotor: spin DISC_TURNS, land winning pocket under the top marker
   const additionalRotation = ((360 - targetCenter) % 360) + 360 * DISC_TURNS
-  const finalRotation = currentRotation.value + additionalRotation
+  const startRotation = currentRotation.value
+  const finalRotation = startRotation + additionalRotation
 
-  discStyle.value = {
-    transform: `rotate(${finalRotation}deg)`,
-    transition: `transform ${SPIN_MS}ms cubic-bezier(0.12, 0.78, 0.22, 1)`,
-  }
-
+  // Start frame (no transition) so the rotor has a state to animate FROM even
+  // when the wheel was just revealed from display:none (v-show).
+  discStyle.value = { transform: `rotate(${startRotation}deg)`, transition: 'none' }
   // Ball — step 1: jump onto the OUTER track (inset 6%), no transition
   ballStyle.value = { inset: '6%', transform: 'rotate(0deg)', transition: 'none' }
 
-  // Ball — step 2: spin opposite + spiral INWARD to the pocket ring (inset 16%)
+  // Next frame: kick off both transitions to their final resting state.
   nextTick().then(() => requestAnimationFrame(() => {
+    discStyle.value = {
+      transform: `rotate(${finalRotation}deg)`,
+      transition: `transform ${SPIN_MS}ms cubic-bezier(0.12, 0.78, 0.22, 1)`,
+    }
+    // Ball — step 2: spin opposite + spiral INWARD to the pocket ring (inset 16%)
     ballStyle.value = {
       inset: '16%',
       transform: `rotate(${BALL_END}deg)`,

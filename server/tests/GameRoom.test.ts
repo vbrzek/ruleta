@@ -73,6 +73,16 @@ describe('placeBet', () => {
   it('throws for invalid number (out of 0-36)', () => {
     expect(() => room.placeBet('host1', { type: 'number', amount: 100, number: 37 })).toThrow('Neplatné číslo')
   })
+  it('accepts valid dozen and column bets', () => {
+    room.placeBet('host1', { type: 'dozen', amount: 100, number: 2 })
+    expect(room.allActiveBetsPlaced()).toBe(true)
+  })
+  it('throws for dozen selection out of 1-3', () => {
+    expect(() => room.placeBet('host1', { type: 'dozen', amount: 100, number: 4 })).toThrow('Neplatná skupina')
+  })
+  it('throws for column selection out of 1-3', () => {
+    expect(() => room.placeBet('host1', { type: 'column', amount: 100, number: 0 })).toThrow('Neplatná skupina')
+  })
   it('calls onAllBetsPlaced when all active players bet', () => {
     let called = false
     room.onAllBetsPlaced = () => { called = true }

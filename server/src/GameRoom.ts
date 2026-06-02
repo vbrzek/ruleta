@@ -87,6 +87,9 @@ export class GameRoom {
     if (bet.type === 'number' && (bet.number === undefined || bet.number < 0 || bet.number > 36)) {
       throw new Error('Neplatné číslo')
     }
+    if ((bet.type === 'dozen' || bet.type === 'column') && (bet.number === undefined || bet.number < 1 || bet.number > 3)) {
+      throw new Error('Neplatná skupina')
+    }
     this.bets.set(playerId, bet)
     if (this.allActiveBetsPlaced()) this.onAllBetsPlaced?.()
   }

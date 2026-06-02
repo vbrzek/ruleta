@@ -26,14 +26,16 @@
         </ul>
       </div>
 
-      <button
-        v-if="isHost"
-        class="btn-primary start-btn"
-        :disabled="started"
-        @click="doStart"
-      >
-        {{ started ? 'Spouštím...' : 'Spustit hru' }}
-      </button>
+      <template v-if="isHost">
+        <button
+          class="btn-primary start-btn"
+          :disabled="started || !canStart"
+          @click="doStart"
+        >
+          {{ started ? 'Spouštím...' : 'Spustit hru' }}
+        </button>
+        <p v-if="!canStart" class="waiting-text">Čekáme na alespoň 2 hráče...</p>
+      </template>
       <p v-else class="waiting-text">Čekáme až hostitel spustí hru...</p>
     </div>
   </div>
@@ -43,20 +45,23 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import QRCode from 'qrcode'
-import type { Player } from '@ruleta/shared'
+import { storeToRefs } from 'pinia'
 import { useSocketStore } from '../stores/socketStore'
+import { useGameStore } from '../stores/gameStore'
 import { useGame } from '../composables/useGame'
 
 const route = useRoute()
 const router = useRouter()
 const socketStore = useSocketStore()
+const gameStore = useGameStore()
 const { startGame } = useGame()
 
 const code = route.params.code as string
-const players = ref<Player[]>([])
+// Player list and identity come from the store: room:joined arrives before this
+// view mounts, so a view-local listener would miss the initial roster.
+const { lobbyPlayers: players, myPlayerId: myId } = storeToRefs(gameStore)
 const qrUrl = ref('')
 const copied = ref(false)
-const myId = ref('')
 const started = ref(false)
 
 const isHost = computed(() => {
@@ -64,35 +69,14 @@ const isHost = computed(() => {
   return me?.isHost ?? false
 })
 
-function onRoomJoined(data: unknown) {
-  const d = data as { players: Player[] }
-  players.value = d.players
-  myId.value = socketStore.getSocket().id ?? ''
-}
-
-function onPlayerJoined(data: unknown) {
-  const d = data as { player: Player }
-  if (!players.value.find(p => p.id === d.player.id)) {
-    players.value.push(d.player)
-  }
-}
-
-function onPlayerLeft(data: unknown) {
-  const d = data as { players: Player[] }
-  players.value = d.players
-}
+const canStart = computed(() => players.value.length >= 2)
 
 function onGameStarted() {
   router.push(`/game/${code}`)
 }
 
 onMounted(async () => {
-  myId.value = socketStore.getSocket().id ?? ''
-
   const s = socketStore.getSocket()
-  s.on('room:joined', onRoomJoined)
-  s.on('room:playerJoined', onPlayerJoined)
-  s.on('room:playerLeft', onPlayerLeft)
   s.on('game:started', onGameStarted)
 
   // Generate QR code for the join URL
@@ -104,9 +88,6 @@ onMounted(async () => {
 
 onUnmounted(() => {
   const s = socketStore.getSocket()
-  s.off('room:joined', onRoomJoined)
-  s.off('room:playerJoined', onPlayerJoined)
-  s.off('room:playerLeft', onPlayerLeft)
   s.off('game:started', onGameStarted)
 })
 

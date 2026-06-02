@@ -33,6 +33,52 @@ function seedState(store: ReturnType<typeof useGameStore>) {
   } as any
 }
 
+describe('gameStore — lobby roster is captured from room:joined', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    for (const k of Object.keys(handlers)) delete handlers[k]
+  })
+
+  it('populates lobbyPlayers on room:joined so the host sees themselves before the game starts', () => {
+    const store = useGameStore()
+    store.setupListeners()
+
+    handlers['room:joined']({
+      code: 'ABCD',
+      isSingleplayer: false,
+      players: [{ id: 'me', nickname: 'Host', balance: 1000, status: 'active', isHost: true }],
+    })
+
+    expect(store.lobbyPlayers).toHaveLength(1)
+    expect(store.lobbyPlayers[0]).toMatchObject({ id: 'me', isHost: true })
+  })
+
+  it('adds and removes lobby players, and reassigns host', () => {
+    const store = useGameStore()
+    store.setupListeners()
+
+    handlers['room:joined']({
+      code: 'ABCD',
+      isSingleplayer: false,
+      players: [{ id: 'me', nickname: 'Host', balance: 1000, status: 'active', isHost: true }],
+    })
+    handlers['room:playerJoined']({
+      player: { id: 'other', nickname: 'B', balance: 1000, status: 'active', isHost: false },
+    })
+    expect(store.lobbyPlayers.map(p => p.id)).toEqual(['me', 'other'])
+
+    handlers['room:newHost']({ playerId: 'other' })
+    expect(store.lobbyPlayers.find(p => p.id === 'other')!.isHost).toBe(true)
+    expect(store.lobbyPlayers.find(p => p.id === 'me')!.isHost).toBe(false)
+
+    handlers['room:playerLeft']({
+      playerId: 'me',
+      players: [{ id: 'other', nickname: 'B', balance: 1000, status: 'active', isHost: true }],
+    })
+    expect(store.lobbyPlayers.map(p => p.id)).toEqual(['other'])
+  })
+})
+
 describe('gameStore — win/loss visualization must wait for the spin animation', () => {
   beforeEach(() => {
     setActivePinia(createPinia())

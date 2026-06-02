@@ -1,45 +1,24 @@
 <template>
   <div class="game-view">
-    <!-- Left: wheel -->
-    <div class="wheel-section">
-      <RouletteWheel
-        :spinning="gameState?.phase === 'spinning'"
-        :target-number="gameState?.lastResult"
-        @spin-complete="onSpinComplete"
-      />
+    <!-- Center stage: betting table while betting, wheel only while it spins -->
+    <div class="stage">
+      <!-- Wheel — kept mounted (v-show) so its spin animation keeps working -->
+      <div v-show="showWheel" class="wheel-stage">
+        <RouletteWheel
+          :spinning="gameState?.phase === 'spinning'"
+          :target-number="gameState?.lastResult"
+          @spin-complete="onSpinComplete"
+        />
 
-      <GameResult
-        :visible="showResult"
-        :result-number="gameState?.lastResult"
-        :my-win="myWin"
-      />
-    </div>
-
-    <!-- Right: sidebar -->
-    <div class="sidebar">
-      <!-- Always-visible home button -->
-      <div class="sidebar-header">
-        <button class="home-btn btn-secondary" @click="goHome">← Domů</button>
-        <span v-if="gameState" class="round-label">Kolo {{ gameState.round + 1 }}<span v-if="gameState.phase === 'betting' && bettingTimeLeft > 0" class="timer"> · {{ bettingTimeLeft }}s</span></span>
-      </div>
-
-      <div class="players-section">
-        <div v-if="!gameState" class="connecting-notice">
-          <div class="spinner">⟳</div>
-          <p>Připojování...</p>
-          <button class="btn-secondary" style="margin-top:12px" @click="goHome">Zpět domů</button>
-        </div>
-        <PlayerList
-          v-else
-          :players="gameState.players"
-          :my-id="myPlayerId"
-          :bets="gameState.currentBets"
-          :last-balances="lastBalances"
-          :phase="gameState.phase"
+        <GameResult
+          :visible="showResult"
+          :result-number="gameState?.lastResult"
+          :my-win="myWin"
         />
       </div>
 
-      <div class="betting-section">
+      <!-- Betting table — takes the full stage when the wheel is idle -->
+      <div v-if="!showWheel" class="bet-stage">
         <BettingPanel
           v-if="myPlayer && gameState?.phase === 'betting' && myPlayer.status === 'active'"
           :balance="myPlayer.balance"
@@ -47,17 +26,36 @@
           @confirm-bet="onBet"
         />
 
-        <div v-else-if="myPlayer?.status === 'spectator'" class="spectator-notice">
+        <div v-else-if="myPlayer?.status === 'spectator'" class="phase-notice">
           Sledujete hru jako divák
         </div>
 
-        <div v-else-if="gameState?.phase === 'spinning'" class="phase-notice spinning">
-          🎰 Točíme...
+        <div v-else-if="!gameState" class="phase-notice">
+          <div class="spinner">⟳</div>
+          <p>Připojování...</p>
+          <button class="btn-secondary" style="margin-top:12px" @click="goHome">Zpět domů</button>
         </div>
 
-        <div v-else-if="gameState?.phase === 'result'" class="phase-notice">
-          Výsledky...
-        </div>
+        <div v-else class="phase-notice">Čekáme na další kolo…</div>
+      </div>
+    </div>
+
+    <!-- Sidebar: players list -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <button class="home-btn btn-secondary" @click="goHome">← Domů</button>
+        <span v-if="gameState" class="round-label">Kolo {{ gameState.round + 1 }}<span v-if="gameState.phase === 'betting' && bettingTimeLeft > 0" class="timer"> · {{ bettingTimeLeft }}s</span></span>
+      </div>
+
+      <div class="players-section">
+        <PlayerList
+          v-if="gameState"
+          :players="gameState.players"
+          :my-id="myPlayerId"
+          :bets="gameState.currentBets"
+          :last-balances="lastBalances"
+          :phase="gameState.phase"
+        />
       </div>
     </div>
 
@@ -71,7 +69,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useGameStore } from '../stores/gameStore'
@@ -99,6 +97,13 @@ const {
 const code = route.params.code as string
 const showResult = ref(false)
 const myWin = ref(0)
+
+// Show the wheel only while it spins and during the brief result reveal;
+// otherwise the betting table owns the stage.
+const showWheel = computed(() => {
+  const phase = gameState.value?.phase
+  return phase === 'spinning' || phase === 'result' || showResult.value
+})
 
 onMounted(() => {
   // If singleplayer: we arrived here from HomeView which created the room
@@ -154,13 +159,41 @@ function goHome() {
   box-shadow: 0 0 60px rgba(0, 0, 0, 0.8);
 }
 
-.wheel-section {
+.stage {
   flex: 1;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: visible;
+  overflow: hidden;
+}
+
+.wheel-stage {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bet-stage {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 12px;
+}
+
+.bet-stage :deep(.betting-panel) {
+  width: 100%;
+  max-width: 960px;
+  height: 100%;
+}
+
+.bet-stage .phase-notice {
+  flex-direction: column;
 }
 
 .round-badge {
@@ -210,18 +243,6 @@ function goHome() {
 .players-section {
   flex: 1;
   overflow-y: auto;
-  border-bottom: 1px solid var(--rim);
-}
-
-.connecting-notice {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  gap: 8px;
 }
 
 .spinner {
@@ -230,21 +251,14 @@ function goHome() {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.betting-section {
-  flex-shrink: 0;
-  min-height: 220px;
-}
-
-.spectator-notice, .phase-notice {
+.phase-notice {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
+  gap: 8px;
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   padding: 1rem;
   text-align: center;
 }
-
-.phase-notice.spinning { color: var(--accent2); font-size: 1.1rem; }
 </style>

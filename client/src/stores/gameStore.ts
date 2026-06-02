@@ -9,6 +9,11 @@ export const useGameStore = defineStore('game', () => {
   const gameState = ref<GameState | null>(null)
   const myPlayerId = ref<string>('')
   const roomCode = ref<string>('')
+  // Players shown in the multiplayer lobby before the game starts. Kept in the
+  // store (not in LobbyView) because room:joined fires before LobbyView mounts —
+  // the store's listeners are registered early enough in createRoom/joinRoom to
+  // capture it, the view's would miss it.
+  const lobbyPlayers = ref<Player[]>([])
   const bettingTimeLeft = ref(30)
   const lastWinners = ref<Record<string, number>>({})
   const lastBalances = ref<Record<string, number>>({})
@@ -51,10 +56,14 @@ export const useGameStore = defineStore('game', () => {
     addListener('room:joined', (data: unknown) => {
       const d = data as { code: string; players: Player[]; isSingleplayer: boolean }
       roomCode.value = d.code
+      lobbyPlayers.value = d.players
     })
 
     addListener('room:playerJoined', (data: unknown) => {
       const d = data as { player: Player }
+      if (!lobbyPlayers.value.find(p => p.id === d.player.id)) {
+        lobbyPlayers.value.push(d.player)
+      }
       if (gameState.value) {
         if (!gameState.value.players.find(p => p.id === d.player.id)) {
           gameState.value.players.push(d.player)
@@ -64,11 +73,13 @@ export const useGameStore = defineStore('game', () => {
 
     addListener('room:playerLeft', (data: unknown) => {
       const d = data as { playerId: string; players: Player[] }
+      lobbyPlayers.value = d.players
       if (gameState.value) gameState.value.players = d.players
     })
 
     addListener('room:newHost', (data: unknown) => {
       const d = data as { playerId: string }
+      lobbyPlayers.value.forEach(p => { p.isHost = p.id === d.playerId })
       if (gameState.value) {
         gameState.value.players.forEach(p => {
           p.isHost = p.id === d.playerId
@@ -176,6 +187,7 @@ export const useGameStore = defineStore('game', () => {
   function reset() {
     gameState.value = null
     roomCode.value = ''
+    lobbyPlayers.value = []
     gameOverData.value = null
     betConfirmed.value = false
     pendingBalances.value = null
@@ -188,7 +200,7 @@ export const useGameStore = defineStore('game', () => {
   }
 
   return {
-    gameState, myPlayerId, roomCode, bettingTimeLeft,
+    gameState, myPlayerId, roomCode, lobbyPlayers, bettingTimeLeft,
     lastWinners, lastBalances, gameOverData, betConfirmed,
     myPlayer, setupListeners, teardownListeners, reset, applySpinOutcome,
   }

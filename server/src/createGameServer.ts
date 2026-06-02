@@ -169,7 +169,7 @@ export function createGameServer(opts: GameServerOptions = {}) {
       if (!code) return
       const room = rooms.get(code)
       if (!room) return
-      const VALID_TYPES = new Set(['red', 'black', 'even', 'odd', 'number'])
+      const VALID_TYPES = new Set(['red', 'black', 'even', 'odd', 'low', 'high', 'dozen', 'column', 'number'])
       if (!VALID_TYPES.has(type)) {
         socket.emit('room:error', { message: 'Neplatný typ sázky' })
         return

@@ -30,6 +30,17 @@ export function resolveWin(
     case 'black':  return BLACK_NUMBERS.has(result) ? amount : 0
     case 'even':   return result !== 0 && result % 2 === 0 ? amount : 0
     case 'odd':    return result % 2 === 1 ? amount : 0
+    case 'low':    return result >= 1 && result <= 18 ? amount : 0
+    case 'high':   return result >= 19 && result <= 36 ? amount : 0
+    case 'dozen': {
+      if (result === 0 || betNumber === undefined) return 0
+      return Math.ceil(result / 12) === betNumber ? amount * 2 : 0
+    }
+    case 'column': {
+      if (result === 0 || betNumber === undefined) return 0
+      const col = result % 3 === 0 ? 3 : result % 3
+      return col === betNumber ? amount * 2 : 0
+    }
     case 'number': return result === betNumber ? amount * 35 : 0
     default: return 0
   }
