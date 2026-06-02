@@ -5,8 +5,8 @@ export const useSocketStore = defineStore('socket', () => {
     let socket = null;
     const connected = ref(false);
     function connect() {
-        if (socket?.connected)
-            return socket;
+        if (socket)
+            return socket; // Already created — may still be connecting, don't create another
         socket = io({ path: '/socket.io', transports: ['websocket'] });
         socket.on('connect', () => {
             connected.value = true;

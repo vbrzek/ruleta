@@ -117,18 +117,20 @@ async function doJoin() {
 <style scoped>
 .home {
   display: flex;
-  width: 100vw;
-  height: 100vh;
+  width: min(100vw, 1280px);
+  height: min(100vh, 720px);
   overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.8);
 }
 
 .wheel-half {
   width: 50%;
   height: 100%;
-  overflow: hidden;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
+  padding: 32px;
 }
 
 .menu-half {
@@ -138,6 +140,8 @@ async function doJoin() {
   align-items: center;
   justify-content: center;
   padding: 2rem;
+  background: rgba(6, 4, 16, 0.92);
+  border-left: 1px solid rgba(200, 150, 12, 0.25);
 }
 
 .menu-content {

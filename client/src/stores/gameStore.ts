@@ -81,7 +81,7 @@ export const useGameStore = defineStore('game', () => {
       if (gameState.value) gameState.value.phase = 'betting'
       betConfirmed.value = false
       bettingTimeLeft.value = d.timeLimit
-      startBettingTimer()
+      if (d.timeLimit > 0) startBettingTimer()
     })
 
     addListener('game:playerBet', (data: unknown) => {

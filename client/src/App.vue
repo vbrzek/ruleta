@@ -32,7 +32,19 @@ onUnmounted(() => window.removeEventListener('resize', checkOrientation))
 </script>
 
 <style scoped>
-.app { width: 100vw; height: 100vh; position: relative; }
+.app {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Casino felt — dark green with overhead spotlight and woven texture */
+  background:
+    repeating-linear-gradient( 45deg, rgba(255,255,255,0.009) 0px, rgba(255,255,255,0.009) 1px, transparent 1px, transparent 6px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,0.009) 0px, rgba(255,255,255,0.009) 1px, transparent 1px, transparent 6px),
+    radial-gradient(ellipse at 50% 38%, #0e3d20 0%, #071a0e 45%, #030c06 100%);
+}
 
 .mute-btn {
   position: fixed;

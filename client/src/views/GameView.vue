@@ -20,7 +20,7 @@
       <!-- Always-visible home button -->
       <div class="sidebar-header">
         <button class="home-btn btn-secondary" @click="goHome">← Domů</button>
-        <span v-if="gameState" class="round-label">Kolo {{ gameState.round + 1 }}<span v-if="gameState.phase === 'betting'" class="timer"> · {{ bettingTimeLeft }}s</span></span>
+        <span v-if="gameState" class="round-label">Kolo {{ gameState.round + 1 }}<span v-if="gameState.phase === 'betting' && bettingTimeLeft > 0" class="timer"> · {{ bettingTimeLeft }}s</span></span>
       </div>
 
       <div class="players-section">
@@ -144,9 +144,11 @@ function goHome() {
 <style scoped>
 .game-view {
   display: flex;
-  width: 100vw;
-  height: 100vh;
+  width: min(100vw, 1280px);
+  height: min(100vh, 720px);
   overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.8);
 }
 
 .wheel-section {
@@ -155,7 +157,7 @@ function goHome() {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .round-badge {
@@ -178,8 +180,8 @@ function goHome() {
   height: 100%;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid var(--rim);
-  background: var(--bg2);
+  border-left: 1px solid rgba(200, 150, 12, 0.25);
+  background: rgba(6, 4, 16, 0.94);
 }
 
 .sidebar-header {
