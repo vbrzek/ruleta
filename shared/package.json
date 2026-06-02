@@ -1,5 +1,10 @@
 {
   "name": "@ruleta/shared",
   "version": "1.0.0",
-  "types": "types.ts"
+  "type": "module",
+  "main": "types.js",
+  "types": "types.d.ts",
+  "scripts": {
+    "build": "tsc"
+  }
 }

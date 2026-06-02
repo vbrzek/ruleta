@@ -10,3 +10,7 @@ coverage/
 *.tsbuildinfo
 *.vue.js
 shared/*.js
+shared/*.d.ts
+
+# Compiled TS artifacts that must never shadow the .ts source in Vite resolution
+client/src/**/*.js
