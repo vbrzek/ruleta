@@ -3,6 +3,15 @@
     <!-- Credits (i) -->
     <button class="info-btn" aria-label="O hře" @click="showCredits = true">i</button>
 
+    <!-- Install / Add to home screen -->
+    <button
+      v-if="showInstallButton"
+      class="install-btn"
+      @click="promptInstall"
+    >
+      📲 Přidat na plochu
+    </button>
+
     <!-- Left: static wheel (clipped at ~50%) -->
     <div class="wheel-half">
       <RouletteWheel :static="true" />
@@ -80,6 +89,25 @@
         </div>
       </div>
     </Transition>
+
+    <!-- iOS install hint modal -->
+    <Transition name="fade">
+      <div v-if="showIosHint" class="modal-backdrop" @click.self="showIosHint = false">
+        <div class="modal credits">
+          <h2 class="credits-title">Přidat na plochu</h2>
+          <p class="credits-line">
+            1. Klepni na tlačítko <strong>Sdílet</strong> (ikona čtverce se šipkou) ve spodní liště.
+          </p>
+          <p class="credits-line">
+            2. Vyber <strong>Přidat na plochu</strong>.
+          </p>
+          <p class="credits-line">
+            3. Potvrď <strong>Přidat</strong> — Ruleta se objeví jako aplikace.
+          </p>
+          <button class="btn-secondary menu-btn" @click="showIosHint = false">Zavřít</button>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -89,6 +117,7 @@ import { useRouter } from 'vue-router'
 import RouletteWheel from '../components/RouletteWheel.vue'
 import { useGame } from '../composables/useGame'
 import { useSocketStore } from '../stores/socketStore'
+import { useInstallPrompt } from '../composables/useInstallPrompt'
 
 const router = useRouter()
 const { createRoom, joinRoom } = useGame()
@@ -98,6 +127,8 @@ const showJoin = ref(false)
 const showCredits = ref(false)
 const joinCode = ref('')
 const error = ref('')
+
+const { showInstallButton, showIosHint, promptInstall } = useInstallPrompt()
 
 function waitForRoom(): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -183,6 +214,23 @@ async function doJoin() {
   transition: background 0.2s, transform 0.2s;
 }
 .info-btn:hover { background: rgba(200, 150, 12, 0.2); transform: scale(1.08); }
+
+.install-btn {
+  position: absolute;
+  top: 56px;
+  left: 14px;
+  z-index: 10;
+  padding: 7px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(200, 150, 12, 0.5);
+  background: rgba(6, 4, 16, 0.6);
+  color: var(--accent2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+.install-btn:hover { background: rgba(200, 150, 12, 0.2); transform: scale(1.04); }
 
 .wheel-half {
   width: 50%;
