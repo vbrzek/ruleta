@@ -16,6 +16,12 @@ export const useGameStore = defineStore('game', () => {
   const betConfirmed = ref(false)
   const isListening = ref(false)
 
+  // Outcome of the current spin, held back until the wheel animation finishes so
+  // the player can't read win/loss off the UI before the ball settles.
+  const pendingBalances = ref<Record<string, number> | null>(null)
+  const pendingWinners = ref<Record<string, number> | null>(null)
+  const pendingBankrupt = ref<string[]>([])
+
   let bettingTimer: ReturnType<typeof setInterval> | null = null
 
   // Registered handler references for teardown
@@ -95,14 +101,14 @@ export const useGameStore = defineStore('game', () => {
       const d = data as { number: number; winners: Record<string, number>; newBalances: Record<string, number> }
       if (gameState.value) {
         gameState.value.phase = 'spinning'
+        // Only the target number drives the wheel animation — safe to set now.
         gameState.value.lastResult = d.number
-        // Update balances in player list
-        gameState.value.players.forEach(p => {
-          if (d.newBalances[p.id] !== undefined) p.balance = d.newBalances[p.id]
-        })
       }
-      lastWinners.value = d.winners
-      lastBalances.value = d.newBalances
+      // Defer balances / winners / bankruptcy until the spin animation completes
+      // (committed via applySpinOutcome) so the result isn't revealed early.
+      pendingBalances.value = d.newBalances
+      pendingWinners.value = d.winners
+      pendingBankrupt.value = []
       stopBettingTimer()
     })
 
@@ -113,8 +119,11 @@ export const useGameStore = defineStore('game', () => {
 
     addListener('game:playerBankrupt', (data: unknown) => {
       const d = data as { playerId: string }
-      const p = gameState.value?.players.find(pl => pl.id === d.playerId)
-      if (p) p.status = 'spectator'
+      // Hold the bust until the animation finishes — otherwise the dimmed row /
+      // "divák" tag would reveal the loss before the ball settles.
+      if (!pendingBankrupt.value.includes(d.playerId)) {
+        pendingBankrupt.value.push(d.playerId)
+      }
     })
 
     addListener('game:over', (data: unknown) => {
@@ -130,6 +139,26 @@ export const useGameStore = defineStore('game', () => {
     }
     registeredHandlers.length = 0
     isListening.value = false
+  }
+
+  /**
+   * Commit the held-back spin outcome (balances, winners, bankruptcies) to the
+   * UI. Called once the wheel animation has finished so win/loss is only ever
+   * revealed after the ball settles.
+   */
+  function applySpinOutcome() {
+    if (!pendingBalances.value) return
+    if (gameState.value) {
+      gameState.value.players.forEach(p => {
+        if (pendingBalances.value![p.id] !== undefined) p.balance = pendingBalances.value![p.id]
+        if (pendingBankrupt.value.includes(p.id)) p.status = 'spectator'
+      })
+    }
+    lastWinners.value = pendingWinners.value ?? {}
+    lastBalances.value = pendingBalances.value
+    pendingBalances.value = null
+    pendingWinners.value = null
+    pendingBankrupt.value = []
   }
 
   function startBettingTimer() {
@@ -149,6 +178,9 @@ export const useGameStore = defineStore('game', () => {
     roomCode.value = ''
     gameOverData.value = null
     betConfirmed.value = false
+    pendingBalances.value = null
+    pendingWinners.value = null
+    pendingBankrupt.value = []
     stopBettingTimer()
     teardownListeners()
     sessionStorage.removeItem('ruleta_room_code')
@@ -158,6 +190,6 @@ export const useGameStore = defineStore('game', () => {
   return {
     gameState, myPlayerId, roomCode, bettingTimeLeft,
     lastWinners, lastBalances, gameOverData, betConfirmed,
-    myPlayer, setupListeners, teardownListeners, reset,
+    myPlayer, setupListeners, teardownListeners, reset, applySpinOutcome,
   }
 })

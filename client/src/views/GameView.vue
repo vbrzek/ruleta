@@ -128,6 +128,9 @@ function onBet({ type, amount, number }: { type: BetType; amount: number; number
 
 function onSpinComplete() {
   stopTicking()
+  // Reveal the outcome only now that the ball has settled: commit balances,
+  // flash and bankruptcies, then read the (now populated) winnings.
+  gameStore.applySpinOutcome()
   showResult.value = true
   myWin.value = lastWinners.value[myPlayerId.value] ?? 0
   if (myWin.value > 0) playWin()
